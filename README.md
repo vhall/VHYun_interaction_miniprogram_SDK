@@ -1,1 +1,11 @@
-# VHYun_interaction_miniprogram_SDK
+# 微吼云互动微信小程序SDK
+
+## 结构说明
+
+### 目录
+- pages/index 主页目录
+- pages/push 推流页目录
+- pages/sdk 互动SDK文件目录
+
+### 注意事项
+- 小程序受制于手机性能，房间内建议最多订阅4路互动流，并且分辨率在480P以下。

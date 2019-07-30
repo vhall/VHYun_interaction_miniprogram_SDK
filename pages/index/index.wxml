@@ -1,0 +1,35 @@
+<!--pages/index.wxml-->
+
+<view class='item'>
+    <span>inavId</span>
+    <span class="input-span"><input id = 'inavId' bindinput='getinput' type='text' value='{{inavId}}' /></span>
+</view>
+
+<view class='item'>
+    <span>appId</span>
+    <span class="input-span"><input id = 'appId' bindinput='getinput' type='text' value='{{appId}}' /></span>
+</view>
+
+<view class='item'>
+    <span>accountId</span>
+    <span class="input-span"><input id = 'accountId' bindinput='getinput' type='text' value='{{accountId}}' /></span>
+</view>
+
+<view class='item'>
+    <span>roomId</span>
+    <span class="input-span"><input id = 'roomId' bindinput='getinput' type='text' value='{{roomId}}' /></span>
+</view>
+
+<view class='item'>
+    <span>token</span>
+    <span class="input-span"><input id = 'token' bindinput='getinput' type='text' value='{{token}}' /></span>
+</view>
+
+<view class='btn-view'>
+  <button bindtap="gotoPush">进入互动</button>
+</view>
+
+<view class='input-view-all'>
+  <view> 版本号：1.0.0 </view>
+</view>
+
