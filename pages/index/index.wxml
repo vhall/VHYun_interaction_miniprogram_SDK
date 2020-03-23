@@ -57,8 +57,4 @@
 <view class='btn-view'>
 	<button bindtap="gotoPush">进入互动</button>
 </view>
-<view class='input-view-all'>
-	<view>版本号：1.1.0</view>
-	<view>开发日期：2019-09-17</view>
-</view>
 
