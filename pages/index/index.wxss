@@ -54,11 +54,12 @@ button:active{
 }
 
 .item{
-   text-align: right; 
+  text-align: right; 
   vertical-align: middle;
   height: 50px;
   line-height: 50px;
   margin-top:20px;
+  margin-right: 110rpx;
 }
 
 
@@ -69,7 +70,7 @@ image{
 
 .item input{
   background-color: #fff;
-  width: 70%;
+  width: 90%;
   vertical-align: middle;
   height: 36px;
   margin-top:0px;

@@ -1,12 +1,9 @@
 {
-  "pages": [
-    "pages/index/index",
-    "pages/push/index"
-  ],
+  "pages": ["pages/index/index", "pages/push/push"],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "WeChat",
+    "navigationBarTitleText": "微吼云小程序互动sdk-demo",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json"
