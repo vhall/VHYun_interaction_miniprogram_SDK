@@ -1,6 +1,6 @@
 // pages/demo/index.js
-import Interaction from '../../sdk/main'
-// import Interaction from '../../minisdk/vhall-mpsdk-interaction-1.1.0'
+// import Interaction from '../../sdk/main'
+import Interaction from '../../minisdk/vhall-mpsdk-interaction-1.1.0'
 
 Page({
   /**
