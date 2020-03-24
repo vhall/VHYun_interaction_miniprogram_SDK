@@ -474,8 +474,7 @@ Page({
     })
   },
   onBindSwitchCamera() {
-    let pusherContext = wx.createLivePusherContext()
-    pusherContext.switchCamera()
+    this.livePusher.switchCamera()
   },
 
   pusherStatechange(param) {
@@ -485,7 +484,6 @@ Page({
     this.livePusher.pusherNetstatus(param)
   },
   playerStatechange(param) {
-    console.log(param)
     this.livePlayer.playerStatechange(param)
   },
   playerNetstatus(param) {
