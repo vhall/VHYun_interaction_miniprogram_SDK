@@ -12,5 +12,6 @@ Page({
   },
   getinput(e) {
     this.data[e.currentTarget.id] = e.detail.value
-  }
+  },
+  onShareAppMessage() {}
 })
