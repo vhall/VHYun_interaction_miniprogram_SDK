@@ -1,0 +1,159 @@
+<view>
+	<live-pusher
+	 class="live-pusher"
+	 id="pusher"
+	 url="{{rtmpUrl}}"
+	 aspect="3:4"
+	 bindstatechange="pusherStatechange"
+	 bindnetstatus="pusherNetstatus"
+	 enable-camera="{{enableCamera}}"
+	 enable-mic="{{enableMic}}"
+	/>
+	<scroll-view class="player-area" scroll-y="true">
+		<!-- data-streamId 必传 -->
+		<live-player
+		 class="livePlayer"
+		 wx:for="{{playerList}}"
+		 wx:key="index"
+		 id="{{item.streamId}}"
+		 src="{{item.url}}"
+		 min-cache="0.2"
+		 max-cache="0.8"
+		 data-streamId="{{item.streamId}}"
+		 bindstatechange="playerStatechange"
+		 bindnetstatus="playerNetstatus"
+		 min-bitrate="400"
+		 max-bitrate="800"
+		>
+			<view class="mark" wx:if="{{!item.enableCamera && item.enableMic}}">纯音频直播</view>
+			<view class="mark" wx:if="{{!item.enableMic && item.enableCamera}}">该live-player无声音</view>
+			<view class="mark" wx:if="{{!item.enableMic && !item.enableCamera}}">无声音且无视频</view>
+		</live-player>
+	</scroll-view>
+</view>
+<view class="btn-area">
+	<button
+	 bindtap="onBindStart"
+	 disabled="{{StartDisabled}}"
+	 class="page-body-button"
+	 type="primary"
+	>
+		上麦
+	</button>
+	<button
+	 bindtap="apply"
+	 disabled="{{StartDisabled}}"
+	 class="page-body-button"
+	 type="primary"
+	>
+		申请上麦
+	</button>
+	<button
+	 bindtap="onBindStop"
+	 disabled="{{StopDisabled}}"
+	 class="page-body-button"
+	 type="primary"
+	>
+		下麦
+	</button>
+	<button bindtap="onBindSwitchCamera" class="page-body-button" type="primary">切换摄像头</button>
+	<button bindtap="onConfigRoomBroadCast" class="page-body-button" type="primary">开启旁路</button>
+	<button bindtap="onStopRoomBroadCast" class="page-body-button" type="primary">关闭旁路</button>
+	<picker
+	 bindchange="bindPickerChange"
+	 value="{{index}}"
+	 range="{{layoutList}}"
+	 range-key="name"
+	>
+		<button class="page-body-button" type="primary">切换旁路布局</button>
+	</picker>
+	<button bindtap="cameraSwitch" class="page-body-button" type="primary">摄像头开关</button>
+	<button bindtap="micSwitch" class="page-body-button" type="primary">麦克风开关</button>
+	<button bindtap="reconnectSocket" class="page-body-button" type="primary">主动重联socket</button>
+</view>
+<!-- 用户列表 -->
+<view class="user-box">
+	<view class="user-title">用户列表</view>
+	<view class="user">
+		<view class="username">昵称</view>
+		<view class="userstatus">状态</view>
+		<view class="operate title">操作</view>
+	</view>
+	<view class="user" wx:for="{{userList}}" wx:key="index">
+		<view class="username">{{item.accountId}}{{item.accountId==accountId?'(我)':''}}</view>
+		<block wx:if="{{item.streams.length}}">
+			<view class="userstatus">
+				<view
+				 wx:for="{{item.streams}}"
+				 wx:for-index="idx"
+				 wx:for-item="itemName"
+				 wx:key="idx"
+				>
+					{{itemName.status ? item.accountId==accountId ? '推流中' : '已订阅' : '未订阅(推流中)'}}
+				</view>
+			</view>
+			<view class="operate blue">
+				<view class="operate-item">
+					<block
+					 wx:for="{{item.streams}}"
+					 wx:for-index="idx"
+					 wx:for-item="itemName"
+					 wx:key="idx"
+					>
+						<view wx:if="{{!itemName.status && item.accountId!=accountId}}" data-streamId="{{itemName.streamId}}" bind:tap="subscribe">
+							订阅
+						</view>
+						<view wx:if="{{itemName.status && item.accountId!=accountId}}" data-streamId="{{itemName.streamId}}" bind:tap="unsubscribe">
+							取消订阅
+						</view>
+					</block>
+				</view>
+				<view
+				 wx:if="{{item.accountId !=accountId}}"
+				 data-userId="{{item.accountId}}"
+				 bind:tap="addBlackList"
+				 class="add-black"
+				>
+					拉黑
+				</view>
+			</view>
+		</block>
+		<block wx:else>
+			<view class="userstatus">观看中</view>
+			<view class="operate blue">
+				<view wx:if="{{item.accountId !=accountId}}" data-userId="{{item.accountId}}" bind:tap="invite">
+					邀请上麦
+				</view>
+				<view
+				 class="operate blue"
+				 wx:if="{{item.accountId !=accountId}}"
+				 data-userId="{{item.accountId}}"
+				 bind:tap="addBlackList"
+				>
+					拉黑
+				</view>
+				<view wx:else></view>
+			</view>
+		</block>
+	</view>
+</view>
+<view class="user-box">
+	<view class="user-title">黑名单列表</view>
+	<view class="blacklist">
+		<view class="username">昵称</view>
+		<view class="title">操作</view>
+	</view>
+	<view class="blacklist" wx:for="{{blackList}}" wx:key="index">
+		<view class="username">{{item}}{{item==accountId?'(我)':''}}</view>
+		<view class="username" wx:if="{{item==accountId}}" />
+		<view
+		 class="black-operate blue"
+		 wx:else
+		 bind:tap="removeBlackList"
+		 data-userId="{{item}}"
+		>
+			移除
+		</view>
+	</view>
+</view>
+

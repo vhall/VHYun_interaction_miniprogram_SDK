@@ -21,8 +21,48 @@
 1.初始化 sdk 创建实例并在成功函数中添加监听事件
 
 ```javascript
-import Interaction from '../../minisdk/vhall-mpsdk-interaction-1.1.0'
-
+import VhallBase from '../../minisdk/vhall-mpsdk-base-1.0.0'
+import Interaction from '../../minisdk/vhall-mpsdk-interaction-1.2.0'
+/**
+ * 推荐写法
+ */
+this.vhallBase = new VhallBase()
+this.vhallChat = new VhallChat()
+this.interaction = new Interaction()
+await this.vhallBase.createInstance({appId,accoutId,token})
+try {
+  this.interaction.createInstance({
+    roomId: options.roomId,
+    inavId: options.inavId,
+    appId: options.appId,
+    accountId: options.accountId,
+    token: options.token,
+    livePusherId: 'pusher',
+    vhallBase: this.vhallBase,
+    THIS:this // 小程序this，仅用于选取在自定义组件中的live-pusher、live-player，不在自定义组件中可以不传
+  })
+    .then(res => {
+    console.log(res)
+    this.vhallrtc = res.vhallrtc // 监听与触发事件实例
+    this.livePusher = res.livePusher // live-pusher实例
+    this.livePlayer = res.livePlayer // live-player实例
+    // todo 添加监听事件
+  })
+    .catch(e => {
+    wx.showToast({
+      title: `连接失败，code: ${e.code}, message: ${e.msg}`,
+      icon: 'none'
+    })
+    // this.destroy()
+    wx.navigateBack({})
+    console.log(e)
+  })
+} catch (error) {
+  console.log(error)
+}
+/**
+ * 旧写法
+ */
 this.interaction = new Interaction()
 this.interaction.createInstance(
   {
@@ -45,8 +85,6 @@ this.interaction.createInstance(
       icon: 'none',
       duration: 5000
     })
-    this.setData({ DisconnectDisabled: false })
-    console.log(e)
   }
 )
 ```
@@ -114,8 +152,19 @@ this.vhallrtc.on(this.vhallrtc.EVENT_ROOM_RECONNECTED, () => {})
  * res.code == 1000 && res.reason == "interrupted" - 小程序切换到后台，被微信杀掉，需要重连连接
  * res.code == 1001 && res.reason == "Stream end encountered" - 服务端拒绝连接
  * res.code == 1006 && res.reason == "abnormal closure" - 服务关闭（部分安卓返回1005）
+ * 当监听到上述4种状态码时，sdk不会触发自动重联
  * */
 this.vhallrtc.on(this.vhallrtc.EVENT_ROOM_CLOSE, res => {})
+```
+
+##### 主动重联 socket 函数
+
+```javascript
+/**
+ * 当前网络从wifi切换到4g的时候，socket会关闭并触发 code：1006，此时需要手动重联，4g切换wifi不会关闭
+ * */
+this.vhallBase.initiativeReconnect()
+this.vhallrtc.initiativeReconnect()
 ```
 
 ##### 监听添加用户进黑名单事件
@@ -247,9 +296,13 @@ this.vhallrtc.on(this.vhallrtc.EVENT_REMOTESTREAM_REMOVED, event => {})
 
 ```javascript
 /**
- * 第一个参数为保留字符，传空对象即可
- * 第二个参数为成功函数 { streamId, url } 分别为流id和推流地址
- * 第三个为失败函数
+ * 成功函数 { streamId, url } 分别为流id和推流地址
+ * 返回promise
+ * 推荐写法：
+ */
+this.vhallrtc.publish().then().catch()
+/**
+ * 旧写法（不推荐）：
  */
 this.vhallrtc.publish(
   {},
@@ -262,10 +315,13 @@ this.vhallrtc.publish(
 
 ```javascript
 /**
- * sdk封装live-pusher的stop方法包括了该函数，故无需重复调用
- * 第一个参数为保留字符，传空对象即可
- * 第二个参数为成功函数 { streamId, url } 分别为流id和推流地址
- * 第三个为失败函数
+ * 成功函数 { streamId, url } 分别为流id和推流地址
+ * 返回promise
+ * 推荐写法：
+ */
+this.vhallrtc.unpublish().then().catch()
+/**
+ * 旧写法（不推荐）：
  */
 this.vhallrtc.unpublish(
   {},
@@ -280,9 +336,14 @@ this.vhallrtc.unpublish(
 
 ```javascript
 /**
- * 第一个参数为对象，参数为添加远端流监听事件中返回的streamId
- * 第二个参数为成功函数 { streamId, url } 分别为流id和推流地址
- * 第三个为失败函数
+ * 参数为对象，参数为添加远端流监听事件中返回的streamId
+ * 成功函数 { streamId, url } 分别为流id和推流地址
+ * 返回promise
+ * 推荐写法：
+ */
+this.vhallrtc.subscribe({ streamId }).then().catch()
+/**
+ * 旧写法（不推荐）：
  */
 this.vhallrtc.subscribe(
   { streamId },
@@ -295,11 +356,15 @@ this.vhallrtc.subscribe(
 
 ```javascript
 /**
- * 第一个参数为对象，参数为需要取消的 streamId
- * 第二个参数为成功函数
- * 第三个为失败函数
+ * 参数为对象，参数为需要取消的 streamId
+ * 返回promise
+ * 推荐写法：
  */
-  unsubscribe({streamId}, success = () => {}, failure = () => {}) {}
+this.vhallrtc.unsubscribe({streamId}).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.unsubscribe({streamId}, success = () => {}, failure = () => {}) {}
 ```
 
 ##### 开启旁路直播推流
@@ -309,6 +374,11 @@ this.vhallrtc.subscribe(
  * profile：清晰度,参考清晰度常量
  * layoutMode：旁路布局 - 参考旁路布局常量
  * roomId ： 房间id
+ * 推荐写法：
+ */
+this.vhallrtc.startBroadCast({ profile, roomId, layoutMode }).then().catch()
+/**
+ * 旧写法（不推荐）：
  */
 this.vhallrtc.startBroadCast(
   { profile, roomId, layoutMode },
@@ -325,6 +395,11 @@ this.vhallrtc.startBroadCast(
 ```javascript
 /**
  * roomId ： 房间id
+ * 推荐写法：
+ */
+this.vhallrtc.stopBroadCast({ roomId: this.options.roomId }).then().catch()
+/**
+ * 旧写法（不推荐）：
  */
 this.vhallrtc.stopBroadCast(
   { roomId: this.options.roomId },
@@ -342,6 +417,11 @@ this.vhallrtc.stopBroadCast(
 ```javascript
 /**
  * layout:要切换的旁路布局参数
+ * 推荐写法：
+ */
+this.vhallrtc.setBroadCastLayout({ layout }).then().catch()
+/**
+ * 旧写法（不推荐）：
  */
 this.vhallrtc.setBroadCastLayout(
   { layout },
@@ -359,8 +439,13 @@ this.vhallrtc.setBroadCastLayout(
 ```javascript
 /**
  * 要配置为主屏的流id
+ * 推荐写法：
  */
-setBroadCastScreen({ mainScreenStreamId }, (success = () => {}), (failure = () => {}))
+this.vhallrtc.setBroadCastScreen({ mainScreenStreamId }).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.setBroadCastScreen({ mainScreenStreamId }, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 申请上麦
@@ -368,8 +453,13 @@ setBroadCastScreen({ mainScreenStreamId }, (success = () => {}), (failure = () =
 ```javascript
 /**
  * 第一个参数为保留字段
+ * 推荐写法：
  */
-apply({}, (success = () => {}), (failure = () => {}))
+this.vhallrtc.apply().then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.apply({}, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 同意申请上麦
@@ -377,8 +467,13 @@ apply({}, (success = () => {}), (failure = () => {}))
 ```javascript
 /**
  * userId:要上麦的用户id
+ * 推荐写法：
  */
-consentApply({ userId }, (success = () => {}), (failure = () => {}))
+this.vhallrtc.consentApply({ userId }).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.consentApply({ userId }, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 拒绝申请上麦
@@ -386,8 +481,13 @@ consentApply({ userId }, (success = () => {}), (failure = () => {}))
 ```javascript
 /**
  * userId:要拒绝上麦的用户id
+ * 推荐写法：
  */
-rejectApply({ userId }, (success = () => {}), (failure = () => {}))
+this.vhallrtc.rejectApply({ userId }).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.rejectApply({ userId }, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 邀请上麦
@@ -395,35 +495,52 @@ rejectApply({ userId }, (success = () => {}), (failure = () => {}))
 ```javascript
 /**
  * userId:要邀请上麦的用户id
+ * 推荐写法：
  */
-invite({ userId }, (success = () => {}), (failure = () => {}))
+this.vhallrtc.invite({ userId }).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.invite({ userId }, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 同意被邀请上麦
 
 ```javascript
 /**
- * 第一个参数为保留字段
+ * 推荐写法：
  */
-consentInvite({}, (success = () => {}), (failure = () => {}))
+this.vhallrtc.consentInvite().then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.consentInvite({}, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 拒绝被邀请上麦
 
 ```javascript
 /**
- * 第一个参数为保留字段
+ * 推荐写法：
  */
-rejectInvite({}, (success = () => {}), (failure = () => {}))
+this.vhallrtc.rejectInvite().then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.rejectInvite({}, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 获取互动黑名单列表
 
 ```javascript
 /**
- * 第一个参数为保留字段
+ * 推荐写法：
  */
-getBlackList({}, (success = () => {}), (failure = () => {}))
+this.vhallrtc.getBlackList().then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.getBlackList({}, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 将用户添加到黑名单
@@ -432,7 +549,11 @@ getBlackList({}, (success = () => {}), (failure = () => {}))
 /**
  * userId:要添加到黑名单的用户id
  */
-addBlackList({ userId }, (success = () => {}), (failure = () => {}))
+this.vhallrtc.addBlackList({ userId }).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.addBlackList({ userId }, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 将用户从黑名单移除
@@ -441,7 +562,11 @@ addBlackList({ userId }, (success = () => {}), (failure = () => {}))
 /**
  * userId:要移除黑名单的用户id
  */
-removeBlackList({ userId }, (success = () => {}), (failure = () => {}))
+this.vhallrtc.removeBlackList({ userId }).then().catch()
+/**
+ * 旧写法（不推荐）：
+ */
+this.vhallrtc.removeBlackList({ userId }, (success = () => {}), (failure = () => {}))
 ```
 
 ##### 获取房间信息

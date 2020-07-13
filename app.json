@@ -1,5 +1,5 @@
 {
-  "pages": ["pages/index/index", "pages/push/push"],
+  "pages": ["pages/index/index", "pages/push/push", "pages/interact/interact"],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",

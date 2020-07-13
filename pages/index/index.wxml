@@ -54,6 +54,32 @@
 		/>
 	</span>
 </view>
+<view class='item' wx:if="{{ratio}}">
+	<span>channelId</span>
+	<span class="input-span">
+		<input
+		 id='token'
+		 bindinput='getinput'
+		 type='text'
+		 value='{{channelId}}'
+		/>
+	</span>
+</view>
+<view class="item select-box">
+	<span>初始化类型</span>
+	<span class="input-span">
+		<radio-group bindchange="radioChange">
+			<label class="radio">
+				<radio value="1" checked="true" />
+				互动
+			</label>
+			<label class="radio">
+				<radio value="2" />
+				互动+IM
+			</label>
+		</radio-group>
+	</span>
+</view>
 <view class='btn-view'>
 	<button bindtap="gotoPush">进入互动</button>
 </view>

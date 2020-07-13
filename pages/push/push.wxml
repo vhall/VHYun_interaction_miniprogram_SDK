@@ -6,10 +6,13 @@
 	 aspect="3:4"
 	 bindstatechange="pusherStatechange"
 	 bindnetstatus="pusherNetstatus"
+	 enable-camera="{{enableCamera}}"
+	 enable-mic="{{enableMic}}"
 	/>
 	<scroll-view class="player-area" scroll-y="true">
 		<!-- data-streamId 必传 -->
 		<live-player
+		 class="livePlayer"
 		 wx:for="{{playerList}}"
 		 wx:key="index"
 		 id="{{item.streamId}}"
@@ -21,7 +24,11 @@
 		 bindnetstatus="playerNetstatus"
 		 min-bitrate="400"
 		 max-bitrate="800"
-		/>
+		>
+			<view class="mark" wx:if="{{!item.enableCamera && item.enableMic}}">纯音频直播</view>
+			<view class="mark" wx:if="{{!item.enableMic && item.enableCamera}}">该live-player无声音</view>
+			<view class="mark" wx:if="{{!item.enableMic && !item.enableCamera}}">无声音且无视频</view>
+		</live-player>
 	</scroll-view>
 </view>
 <view class="btn-area">
@@ -60,90 +67,197 @@
 	>
 		<button class="page-body-button" type="primary">切换旁路布局</button>
 	</picker>
+	<button bindtap="cameraSwitch" class="page-body-button" type="primary">摄像头开关</button>
+	<button bindtap="micSwitch" class="page-body-button" type="primary">麦克风开关</button>
+	<button bindtap="reconnectSocket" class="page-body-button" type="primary">主动重联socket</button>
+</view>
+<view class="switchView">
+	<view bind:tap="switchView" data-id="1">互动房间信息列表</view>
+	<view bind:tap="switchView" data-id="2">IM</view>
 </view>
 <!-- 用户列表 -->
-<view class="user-box">
-	<view class="user-title">用户列表</view>
-	<view class="user">
-		<view class="username">昵称</view>
-		<view class="userstatus">状态</view>
-		<view class="operate title">操作</view>
-	</view>
-	<view class="user" wx:for="{{userList}}" wx:key="index">
-		<view class="username">{{item.accountId}}{{item.accountId==accountId?'(我)':''}}</view>
-		<block wx:if="{{item.streams.length}}">
-			<view class="userstatus">
-				<view
-				 wx:for="{{item.streams}}"
-				 wx:for-index="idx"
-				 wx:for-item="itemName"
-				 wx:key="idx"
-				>
-					{{itemName.status ? item.accountId==accountId ? '推流中' : '已订阅' : '未订阅(推流中)'}}
-				</view>
-			</view>
-			<view class="operate blue">
-				<view class="operate-item">
-					<block
+<view wx:if="{{showUserList}}">
+	<view class="user-box">
+		<view class="user-title">用户列表</view>
+		<view class="user">
+			<view class="username">昵称</view>
+			<view class="userstatus">状态</view>
+			<view class="operate title">操作</view>
+		</view>
+		<view class="user" wx:for="{{userList}}" wx:key="index">
+			<view class="username">{{item.accountId}}{{item.accountId==accountId?'(我)':''}}</view>
+			<block wx:if="{{item.streams.length}}">
+				<view class="userstatus">
+					<view
 					 wx:for="{{item.streams}}"
 					 wx:for-index="idx"
 					 wx:for-item="itemName"
 					 wx:key="idx"
 					>
-						<view wx:if="{{!itemName.status && item.accountId!=accountId}}" data-streamId="{{itemName.streamId}}" bind:tap="subscribe">
-							订阅
-						</view>
-						<view wx:if="{{itemName.status && item.accountId!=accountId}}" data-streamId="{{itemName.streamId}}" bind:tap="unsubscribe">
-							取消订阅
-						</view>
-					</block>
+						{{itemName.status ? item.accountId==accountId ? '推流中' : '已订阅' : '未订阅(推流中)'}}
+					</view>
 				</view>
-				<view
-				 wx:if="{{item.accountId !=accountId}}"
-				 data-userId="{{item.accountId}}"
-				 bind:tap="addBlackList"
-				 class="add-black"
-				>
-					拉黑
+				<view class="operate blue">
+					<view class="operate-item">
+						<block
+						 wx:for="{{item.streams}}"
+						 wx:for-index="idx"
+						 wx:for-item="itemName"
+						 wx:key="idx"
+						>
+							<view wx:if="{{!itemName.status && item.accountId!=accountId}}" data-streamId="{{itemName.streamId}}" bind:tap="subscribe">
+								订阅
+							</view>
+							<view wx:if="{{itemName.status && item.accountId!=accountId}}" data-streamId="{{itemName.streamId}}" bind:tap="unsubscribe">
+								取消订阅
+							</view>
+						</block>
+					</view>
+					<view
+					 wx:if="{{item.accountId !=accountId}}"
+					 data-userId="{{item.accountId}}"
+					 bind:tap="addBlackList"
+					 class="add-black"
+					>
+						拉黑
+					</view>
 				</view>
+			</block>
+			<block wx:else>
+				<view class="userstatus">观看中</view>
+				<view class="operate blue">
+					<view wx:if="{{item.accountId !=accountId}}" data-userId="{{item.accountId}}" bind:tap="invite">
+						邀请上麦
+					</view>
+					<view
+					 class="operate blue"
+					 wx:if="{{item.accountId !=accountId}}"
+					 data-userId="{{item.accountId}}"
+					 bind:tap="addBlackList"
+					>
+						拉黑
+					</view>
+					<view wx:else></view>
+				</view>
+			</block>
+		</view>
+	</view>
+	<view class="user-box">
+		<view class="user-title">黑名单列表</view>
+		<view class="blacklist">
+			<view class="username">昵称</view>
+			<view class="title">操作</view>
+		</view>
+		<view class="blacklist" wx:for="{{blackList}}" wx:key="index">
+			<view class="username">{{item}}{{item==accountId?'(我)':''}}</view>
+			<view class="username" wx:if="{{item==accountId}}" />
+			<view
+			 class="black-operate blue"
+			 wx:else
+			 bind:tap="removeBlackList"
+			 data-userId="{{item}}"
+			>
+				移除
 			</view>
-		</block>
-		<block wx:else>
-			<view class="userstatus">观看中</view>
-			<view class="operate blue">
-				<view wx:if="{{item.accountId !=accountId}}" data-userId="{{item.accountId}}" bind:tap="invite">
-					邀请上麦
-				</view>
-				<view
-				 class="operate blue"
-				 wx:if="{{item.accountId !=accountId}}"
-				 data-userId="{{item.accountId}}"
-				 bind:tap="addBlackList"
-				>
-					拉黑
-				</view>
-				<view wx:else></view>
-			</view>
-		</block>
+		</view>
 	</view>
 </view>
-<view class="user-box">
-	<view class="user-title">黑名单列表</view>
-	<view class="blacklist">
-		<view class="username">昵称</view>
-		<view class="title">操作</view>
-	</view>
-	<view class="blacklist" wx:for="{{blackList}}" wx:key="index">
-		<view class="username">{{item}}{{item==accountId?'(我)':''}}</view>
-		<view class="username" wx:if="{{item==accountId}}" />
-		<view
-		 class="black-operate blue"
-		 wx:else
-		 bind:tap="removeBlackList"
-		 data-userId="{{item}}"
-		>
-			移除
+<view wx:else>
+	<view class="news">
+		<view class="historycon">
+			<scroll-view
+			 scroll-y="true"
+			 scroll-top="true"
+			 class="history"
+			 scroll-top="{{scrollTop}}"
+			>
+				<block wx:for="{{newslist}}" wx:key="index">
+					<!-- 历史消息 -->
+					<!-- <view class="chat-news">
+              <view style="text-align: left;padding-left: 20rpx;">
+                  <image class='new_img' src="{{item.avatarUrl? item.avatarUrl:'images/avator.png'}}"></image>
+                  <text class="name">{{ item.nickName }}{{item.date}}</text>
+              </view>
+              <view class='you_left'>
+                  <block wx:if="{{item.type=='text'}}">      
+                    <view class='new_txt'>{{item.content}}</view>
+                  </block>
+                  <block wx:if="{{item.type=='image'}}">      
+                    <image class="selectImg" src="{{item.images}}"></image> 
+                  </block>
+              </view>
+          </view> -->
+					<view>{{item.date}}</view>
+					<!-- 自己的消息 -->
+					<view class="chat-news" wx:if="{{item.nickName == accountId}}">
+						<view style="text-align: right;padding-right: 20rpx;">
+							<text class="name">{{ item.nickName }}</text>
+							<image class='new_img' src="{{item.avatarUrl? item.avatarUrl:'images/avator.png'}}" />
+						</view>
+						<view class='my_right'>
+							<block wx:if="{{item.type=='text'}}">
+								<view class='new_txt'>{{item.content}}</view>
+							</block>
+							<block wx:if="{{item.type=='image'}}">
+								<image
+								 class="selectImg"
+								 src="{{item.images}}"
+								 data-src="{{item.images}}"
+								 lazy-load="true"
+								 bindtap="previewImg"
+								/>
+							</block>
+						</view>
+					</view>
+					<!-- 别人的消息 -->
+					<view class="chat-news" wx:else>
+						<view style="text-align: left;padding-left: 20rpx;">
+							<image class='new_img' src="{{item.avatarUrl? item.avatarUrl:'images/avator.png'}}" />
+							<text class="name">{{ item.nickName }}</text>
+						</view>
+						<view class='you_left'>
+							<block wx:if="{{item.type=='text'}}">
+								<view class='new_txt'>{{item.content}}</view>
+							</block>
+							<block wx:if="{{item.type=='image'}}">
+								<image
+								 class="selectImg"
+								 src="{{item.images}}"
+								 data-src="{{item.images}}"
+								 lazy-load="true"
+								 bindtap="previewImg"
+								/>
+							</block>
+						</view>
+					</view>
+				</block>
+			</scroll-view>
 		</view>
+	</view>
+	<!-- 聊天输入 -->
+	<view class="message">
+		<form class="sendMessage">
+			<input
+			 type="text"
+			 placeholder="请输入聊天内容.."
+			 value="{{content}}"
+			 bindinput='bindChange'
+			 bindconfirm='send'
+			/>
+			<button
+			 type="primary"
+			 bindtap='send'
+			 size="small"
+			 button-hover="blue"
+			>发送
+			</button>
+		</form>
+		<!-- <view class="switch-box">
+			<button size="mini" bind:tap="stopAll">全员禁言</button>
+			<button size="mini" bind:tap="cancleAll">取消全员禁言</button>
+			<button size="mini" bind:tap="stopCurrentUser">禁言当前用户</button>
+			<button size="mini" bind:tap="cancleCurrentUser">取消禁言当前用户</button>
+		</view> -->
 	</view>
 </view>
 

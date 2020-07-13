@@ -1,8 +1,6 @@
 // import VhallBase from '../../mpSdkBaseCopy/main'
 // import Interaction from '../../sdk/main'
-// import VhallChat from '../../sdkChat/sdk/main'
 import VhallBase from '../../minisdk/vhall-mpsdk-base-1.0.0'
-import VhallChat from '../../minisdk/vhall-mpsdk-chat-1.1.0'
 import Interaction from '../../minisdk/vhall-mpsdk-interaction-1.2.0'
 
 Page({
@@ -12,15 +10,12 @@ Page({
   data: {
     StopDisabled: true,
     StartDisabled: true,
-    showUserList: true,
     playerList: [],
     userList: [],
     blackList: [],
     accountId: null,
     enableCamera: true,
     enableMic: true,
-    newslist: [],
-    content: '',
     layoutList: [
       { name: '一人铺满', value: 'CANVAS_LAYOUT_PATTERN_GRID_1' },
       { name: '左右两格', value: 'CANVAS_LAYOUT_PATTERN_GRID_2_H' },
@@ -56,7 +51,6 @@ Page({
   options: null, // index 页面传来的参数
   interaction: null, // sdk实例句柄
   vhallrtc: null, // sdk 返回的监听与触发事件的句柄
-  vhallBase: null,
   livePusher: null,
   livePlayer: null,
   networkType: null,
@@ -64,19 +58,14 @@ Page({
    * 生命周期函数-监听页面加载
    */
   async onLoad(options) {
-    let users = new Set()
     this.options = options
     this.setData({ accountId: options.accountId })
     this.getNetworkType()
     this.onNetworkStatusChange()
     this.vhallBase = new VhallBase()
-    this.vhallChat = new VhallChat()
     this.interaction = new Interaction()
     await this.vhallBase.createInstance(options)
     try {
-      const { message } = await this.vhallChat.createInstance({ ...options, vhallBase: this.vhallBase })
-      this.chat = message
-      this.addChatListener(users)
       this.initInteraction({ ...options, vhallBase: this.vhallBase })
     } catch (error) {
       console.log(error)
@@ -111,11 +100,8 @@ Page({
         this.setData({ StartDisabled: false })
       })
       .catch(e => {
-        wx.showToast({
-          title: `连接失败，code: ${e.code}, message: ${e.msg}`,
-          icon: 'none'
-        })
         // this.destroy()
+        console.log(e)
         wx.showToast({ title: e.msg, icon: 'none' })
         setTimeout(() => {
           wx.navigateBack({})
@@ -126,13 +112,11 @@ Page({
   onBindStart() {
     wx.showToast({
       title: '视频加载中,请勿频繁操作。',
-      icon: 'none',
-      duration: 1000
+      icon: 'none'
     })
     this.vhallrtc
       .publish()
       .then(({ streamId, url }) => {
-        wx.hideToast()
         this.setData({ rtmpUrl: url }, () => {
           this.setData({ StartDisabled: true, StopDisabled: false })
           this.livePusher.start()
@@ -221,18 +205,16 @@ Page({
    * 获取黑名单列表
    */
   getBlackList() {
-    return new Promise((resolve, reject) => {
-      this.vhallrtc
-        .getBlackList()
-        .then(list => {
-          console.log(list)
-          this.setData({ blackList: list })
-          resolve(list)
-        })
-        .catch(e => {
-          reject(e)
-        })
-    })
+    return this.vhallrtc
+      .getBlackList()
+      .then(list => {
+        console.log(list)
+        this.setData({ blackList: list })
+        return Promise.resolve(list)
+      })
+      .catch(e => {
+        return Promise.reject(e)
+      })
   },
   /**
    * 移除黑名单
@@ -298,7 +280,6 @@ Page({
 
   destroy() {
     try {
-      this.vhallChat.destroy()
       this.interaction.destroy()
     } catch (error) {
       console.warn(error)
@@ -307,9 +288,6 @@ Page({
     this.livePusher = null
     this.livePlayer = null
     this.interaction = null // sdk实例句柄
-    this.chat = null
-    this.vhallBase = null
-    this.vhallChat = null
     wx.navigateBack({})
   },
   /**
@@ -401,6 +379,7 @@ Page({
   },
   addEventListener() {
     this.vhallrtc.on(this.vhallrtc.EVENT_REMOTESTREAM_ADD, ({ streamId, userId }) => {
+      console.log('收到流添加消息', { streamId, userId })
       this.setData({ userList: this.getRoomInfo() })
       if (userId == this.invitedId) {
         this.subscribe({
@@ -426,7 +405,6 @@ Page({
      * 用户进入房间消息
      */
     this.vhallrtc.on(this.vhallrtc.EVENT_ROOM_JOIN, event => {
-      console.log('互动收到加入房间消息')
       this.setData({ userList: this.getRoomInfo() })
       wx.showToast({
         title: `用户 ${event.userId} 进入房间`,
@@ -555,6 +533,9 @@ Page({
           title: `您被踢出房间`,
           icon: 'none'
         })
+        // this.livePlayer.stop()
+        // this.onBindStop()
+        // this.unpublish()
         setTimeout(() => {
           wx.navigateBack({})
         }, 2000)
@@ -645,36 +626,9 @@ Page({
         }
       }
     })
-
-    // 监听上线消息
-    this.chat.on(this.vhallChat.EVENT_JOIN, res => {
-      console.log('chat 上线', res)
-      // users.add(res.user_id)
-      // this.setData({
-      //   online_number: users.size
-      // })
-      wx.showToast({
-        title: `用户 ${res.user_id} 已上线`,
-        icon: 'none',
-        duration: 2000
-      })
-    })
-    // 监听下线消息
-    this.chat.on(this.vhallChat.EVENT_LEAVE, res => {
-      console.log('chat 下线', res)
-      // users.delete(res.user_id)
-      // this.setData({
-      //   online_number: users.size
-      // })
-      wx.showToast({
-        title: `用户 ${res.user_id} 已下线`,
-        icon: 'none',
-        duration: 2000
-      })
-    })
   },
   onNetworkStatusChange() {
-    wx.onNetworkStatusChange(({ isConnected, networkType }) => {
+    wx.onNetworkStatusChange(async ({ isConnected, networkType }) => {
       console.log('监测到网络变化：', isConnected, networkType)
       if (isConnected) {
         // if (this.networkType == 'wifi' && networkType != 'wifi') {
@@ -690,66 +644,6 @@ Page({
       success: ({ networkType }) => {
         this.networkType = networkType
       }
-    })
-  },
-  addChatListener() {
-    // 监听聊天消息
-    this.chat.on(this.vhallChat.EVENT_CHAT, res => {
-      switch (res.type) {
-        case this.vhallChat.TYPE_TEXT:
-          {
-            let list = []
-            list = this.data.newslist
-            list.push({ content: res.text_content, type: res.type, nickName: res.user_id })
-            this.setData({
-              newslist: list,
-              scrollTop: 100 * list.length
-            })
-          }
-          break
-        case this.vhallChat.TYPE_DISABLE_ALL:
-          wx.showToast({ title: '全员禁言', icon: 'none' })
-          break
-        case this.vhallChat.TYPE_DISABLE:
-          if (res.user_id == this.data.accountId) {
-            wx.showToast({ title: '当前用户被禁言', icon: 'none' })
-          }
-          break
-        case this.vhallChat.TYPE_PERMIT_ALL:
-          wx.showToast({ title: '取消全员禁言', icon: 'none' })
-          break
-        case this.vhallChat.TYPE_PERMIT:
-          if (res.user_id == this.data.accountId) {
-            wx.showToast({ title: '当前用户取消禁言', icon: 'none' })
-          }
-          break
-        default:
-          break
-      }
-    })
-    this.chat.on(this.vhallChat.EVENT_CLOSE, res => {
-      console.log('onClose', res)
-    })
-
-    this.chat.on(this.vhallChat.EVENT_ERROR, res => {
-      console.log('onTaskError', res)
-    })
-    this.chat.on(this.vhallChat.CONNECTFAIL, res => {
-      wx.showToast({ title: 'socket连接失败', icon: 'none' })
-    })
-    this.chat.on(this.vhallChat.RECONNECTING, () => {
-      wx.showToast({ title: 'socket正在重连', icon: 'none' })
-    })
-
-    this.chat.on(this.vhallChat.RECONNECTED, res => {
-      wx.showToast({ title: 'socket重连成功', icon: 'none' })
-    })
-
-    this.chat.on(this.vhallChat.RECONNECTFAIL, res => {
-      wx.showToast({ title: 'socket重连失败', icon: 'none' })
-    })
-    this.chat.on(this.vhallChat.EVENT_CUSTOM, res => {
-      console.log(res)
     })
   },
   /**
@@ -776,60 +670,8 @@ Page({
     this.destroy()
     wx.offNetworkStatusChange()
   },
-  send() {
-    if (!this.data.content || this.data.content.trim() == '') {
-      wx.showToast({
-        title: '消息不能为空哦~',
-        icon: 'none',
-        duration: 2000
-      })
-    } else {
-      if (!this.chat) {
-        return
-      }
-      let msgBody = {
-        data: this.data.content,
-        context: { nick_name: 'vhall' }
-      }
-      // 发送聊天消息
-      this.chat
-        .emitChat(msgBody)
-        .then(() => {
-          this.cleanInput()
-        })
-        .catch(e => {
-          // 发送聊天消息失败
-          console.log(e)
-          wx.showToast({
-            title: `${e.msg}: ${e.code}`,
-            icon: 'none',
-            duration: 2000
-          })
-        })
-    }
-  },
-  //监听input值的改变
-  bindChange(res) {
-    this.setData({
-      content: res.detail.value
-    })
-  },
-  // 清空输入框消息
-  cleanInput() {
-    this.setData({
-      content: ''
-    })
-  },
-  switchView({
-    currentTarget: {
-      dataset: { id }
-    }
-  }) {
-    id == 1 ? this.setData({ showUserList: true }) : this.setData({ showUserList: false })
-  },
   async reconnectSocket() {
     await this.vhallBase.initiativeReconnect()
-    await this.vhallChat.initiativeReconnect()
-    await this.interaction.initiativeReconnect()
+    this.interaction.initiativeReconnect()
   }
 })
