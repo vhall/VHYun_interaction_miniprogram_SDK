@@ -12,7 +12,7 @@
 
 ### 扫码体验
 
-- ![](https://static.vhallyun.com/doc-images/5d82395f01086_5d82395f.jpg)
+- ![](https://static.vhallyun.com/doc-images/5f0c090dcf316_5f0c090d.jpg)
 
 ### 使用方法
 
